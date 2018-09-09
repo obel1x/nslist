@@ -60,7 +60,8 @@ class syntax_plugin_nslist extends DokuWiki_Syntax_Plugin {
             'depth' => 1,
             'date'  => 1,
             'dsort' => 1
-        );
+            ,'liststyle' => 'default'
+            );
 
         list($ns,$params) = explode(' ',$match,2);
         $ns = cleanID($ns);
@@ -70,10 +71,12 @@ class syntax_plugin_nslist extends DokuWiki_Syntax_Plugin {
         if(preg_match('/\b(\d+)\b/i',$params,$m))   $conf['depth'] = $m[1];
         if($ns) $conf['ns'] = $ns;
 
+        if(preg_match('/liststyle=([a-z\-]+)\&?/i',$params,$m)) $conf['liststyle'] = $m[1]; //parse parameter "liststyle"
+
         $conf['dir'] = str_replace(':','/',$conf['ns']);
 
         // prepare data
-        return $conf;
+        return $conf; //conf will become data by function render later
     }
 
     /**
@@ -107,7 +110,20 @@ class syntax_plugin_nslist extends DokuWiki_Syntax_Plugin {
         foreach($result as $item){
             $R->listitem_open(1);
             $R->listcontent_open();
-            $R->internallink(':'.$item['id']);
+            
+            //Different behaviour as of Liststyle- Param
+            if($data['liststyle'] == 'default') {
+                //no special parameter given, use default = empty
+                $item['id_name'] = '';
+            }elseif($data['liststyle'] == 'full')
+            {
+                $item['id_name'] = $item['id']; //full name of space
+            }elseif($data['liststyle'] == 'relative')
+            {
+                $item['id_name'] = substr($item['id'],strlen($data['ns'])+1); //strip off given namespace + ':'
+            };
+            
+            $R->internallink(':'.$item['id'],$item['id_name']);
             if($data['date']) $R->cdata(' '.dformat($item['mtime']));
 
             $R->listcontent_close();
